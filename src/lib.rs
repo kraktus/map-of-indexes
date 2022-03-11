@@ -41,7 +41,6 @@ impl<T: KeyValue> From<MapOfIndexes<T>> for SortedMapOfIndexes<T> {
 }
 
 impl<T: KeyValue> SortedMapOfIndexes<T> {
-
     pub fn new() -> Self {
         Self { inner: Vec::new() }
     }
@@ -58,18 +57,18 @@ impl<T: KeyValue> SortedMapOfIndexes<T> {
             }
         }
         self.inner.push(element)
-
     }
 
-    pub fn get(&self, key: T::K) -> &T::V {
+    pub fn get(&self, key: T::K) -> Option<&T::V> {
         let mut idx = self.inner.len() / 2;
-        loop {
+        for _ in 0..std::mem::size_of::<T::K>() {
             match self.inner[idx].key().cmp(&key) {
-                Ordering::Less => idx *= 2,
+                Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
                 Ordering::Greater => idx /= 2,
-                Ordering::Equal => return &self.inner[idx].value(),
+                Ordering::Equal => return Some(self.inner[idx].value()),
             }
         }
+        None
     }
 }
 
@@ -85,24 +84,36 @@ mod test {
     #[test]
     fn test_push() {
         let mut s = MapOfIndexes::<(i128, u8)>::new();
-        s.push((1,1));
-        s.push((2,1));
-        assert_eq!(&s.inner, &[(1,1), (2,1)]);
+        s.push((1, 1));
+        s.push((2, 1));
+        assert_eq!(&s.inner, &[(1, 1), (2, 1)]);
     }
 
     #[test]
     fn test_push_sorted() {
         let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
-        s.push((1,1));
-        s.push((2,1));
-        assert_eq!(&s.inner, &[(1,1), (2,1)]);
+        s.push((1, 1));
+        s.push((2, 1));
+        assert_eq!(&s.inner, &[(1, 1), (2, 1)]);
+    }
+
+    #[test]
+    fn test_get() {
+        let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
+        s.push((10, 10));
+        s.push((11, 11));
+        s.push((12, 12));
+        s.push((13, 13));
+        for i in 10..14 {
+            assert_eq!(s.get(i as i128), Some(&(i as u8)));
+        }
     }
 
     #[test]
     #[should_panic]
     fn test_push_sorted_panic() {
         let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
-        s.push((1,1));
-        s.push((-100,1));
+        s.push((1, 1));
+        s.push((-100, 1));
     }
 }
