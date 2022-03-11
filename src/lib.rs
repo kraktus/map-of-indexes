@@ -18,21 +18,35 @@ pub enum MapOfIndexesError {
     DuplicateKeys,
 }
 
-#[derive(Clone, Debug)]
-pub struct MapOfIndexes<T> {
-    inner: Vec<T>,
+macro_rules! declare_map {
+    ($name:ident) => {
+        #[derive(Clone, Debug)]
+        pub struct $name<T> {
+            inner: Vec<T>,
+        }
+        impl<T: KeyValue> $name<T> {
+            pub fn new() -> Self {
+                Self { inner: Vec::new() }
+            }
+
+            pub fn with_capacity(capacity: usize) -> Self {
+                Self {
+                    inner: Vec::with_capacity(capacity),
+                }
+            }
+        }
+        impl<T: KeyValue> Default for $name<T> {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    };
 }
 
-#[derive(Clone, Debug)]
-pub struct SortedMapOfIndexes<T> {
-    inner: Vec<T>,
-}
+declare_map! {MapOfIndexes}
+declare_map! {SortedMapOfIndexes}
 
 impl<T: KeyValue> MapOfIndexes<T> {
-    pub fn new() -> Self {
-        Self { inner: Vec::new() }
-    }
-
     pub fn push(&mut self, element: T) {
         self.inner.push(element);
     }
@@ -62,10 +76,6 @@ impl<T: KeyValue> TryFrom<MapOfIndexes<T>> for SortedMapOfIndexes<T> {
 }
 
 impl<T: KeyValue> SortedMapOfIndexes<T> {
-    pub fn new() -> Self {
-        Self { inner: Vec::new() }
-    }
-
     pub fn push(&mut self, element: T) {
         if let Some(last) = self.inner.last() {
             println!("{:?}", last.key());
