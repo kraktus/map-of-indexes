@@ -90,20 +90,30 @@ impl<T: KeyValue> SortedMapOfIndexes<T> {
         self.inner.push(element)
     }
 
-    pub fn get(&self, key: T::K) -> Option<&T::V> {
+    fn get_idx(&self, key: &T::K) -> Option<usize> {
         if self.inner.len() == 0 {
             return None;
         }
         let mut idx = self.inner.len() / 2;
         for _ in 0..std::mem::size_of::<usize>() * 8 - self.inner.len().leading_zeros() as usize {
             // to handle 32bit targets
-            match self.inner[idx].key().cmp(&key) {
+            match self.inner[idx].key().cmp(key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
                 Ordering::Greater => idx /= 2,
-                Ordering::Equal => return Some(self.inner[idx].value()),
+                Ordering::Equal => return Some(idx),
             }
         }
         None
+    }
+
+    pub fn get(&self, key: &T::K) -> Option<&T::V> {
+        self.get_idx(key).map(|idx| self.inner[idx].value())
+    }
+
+    pub fn set(&mut self, element: T) {
+        if let Some(idx) = self.get_idx(element.key()) {
+            self.inner[idx] = element
+        }
     }
 }
 
@@ -140,7 +150,7 @@ mod test {
         s.push((12, 12));
         s.push((13, 13));
         for i in 10..14 {
-            assert_eq!(s.get(i as i128), Some(&(i as u8)));
+            assert_eq!(s.get(&(i as i128)), Some(&(i as u8)));
         }
     }
     #[test]
@@ -148,7 +158,7 @@ mod test {
         let mut s = SortedMapOfIndexes::<(u8, u8)>::new();
         for i in 0..u8::MAX {
             s.push((i, i));
-            assert_eq!(s.get(i), Some(&i));
+            assert_eq!(s.get(&i), Some(&i));
         }
     }
 
@@ -161,7 +171,7 @@ mod test {
     }
 
     #[test]
-    fn try_from() {
+    fn test_try_from() {
         let mut s = MapOfIndexes::<(i32, u64)>::new();
         s.push((1, 1));
         s.push((-100, 2));
@@ -171,12 +181,23 @@ mod test {
     }
 
     #[test]
-    fn try_from_fail_duplicate() {
+    fn test_try_from_fail_duplicate() {
         let mut s = MapOfIndexes::<(i32, u64)>::new();
         s.push((1, 1));
         s.push((1, 2));
         s.push((3, 15));
         let sorted_map_err = SortedMapOfIndexes::<(i32, u64)>::try_from(s).err().unwrap();
         assert_eq!(sorted_map_err, MapOfIndexesError::DuplicateKeys)
+    }
+
+    #[test]
+    fn test_set() {
+        let mut s = SortedMapOfIndexes::<(u16, u16)>::new();
+        s.push((10, 10));
+        s.push((11, 11));
+        s.push((12, 12));
+        s.push((13, 13));
+        s.set((10, 100));
+        assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)])
     }
 }
