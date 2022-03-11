@@ -42,11 +42,15 @@ impl<T: KeyValue> TryFrom<MapOfIndexes<T>> for SortedMapOfIndexes<T> {
     type Error = MapOfIndexesError;
 
     fn try_from(mut map_of_index: MapOfIndexes<T>) -> Result<Self, Self::Error> {
-        // Other solution was to check duplicate while sorting
+        // Other solution was to check duplicate while sorting, supposedly faster to make linear search after
+        // when comparing elements is cheap
         map_of_index
             .inner
             .sort_unstable_by(|a, b| a.key().cmp(b.key()));
-        let duplicate = map_of_index.inner.windows(2).any(|w| w[0].key() == w[1].key());
+        let duplicate = map_of_index
+            .inner
+            .windows(2)
+            .any(|w| w[0].key() == w[1].key());
         if duplicate {
             Err(MapOfIndexesError::DuplicateKeys)
         } else {
@@ -152,7 +156,7 @@ mod test {
         s.push((1, 1));
         s.push((-100, 2));
         s.push((3, 15));
-        let sorted_map: SortedMapOfIndexes::<(i32, u64)> = s.try_into().unwrap();
+        let sorted_map: SortedMapOfIndexes<(i32, u64)> = s.try_into().unwrap();
         assert_eq!(&sorted_map.inner, &[(-100, 2), (1, 1), (3, 15)])
     }
 
