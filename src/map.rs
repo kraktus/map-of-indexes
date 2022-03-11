@@ -1,50 +1,66 @@
-use paste::paste;
+use std::cmp::Ordering;
+use std::fmt::Debug;
 
-macro_rules! impl_for {
-	($($struct_name:ident, $u:ty,)+) => {$(
-paste! {
-#[derive(Clone, Debug)]
-pub struct [<MapOfIndexes $struct_name>] <const KEY_NB_BITS: usize> {
-    inner: Vec<$u>,
+pub trait KeyValue {
+    type K: Ord + Debug;
+    type V;
+    fn key(&self) -> &Self::K;
+    fn value(&self) -> &Self::V;
 }
 
 #[derive(Clone, Debug)]
-pub struct [<SortedMapOfIndexes $struct_name>]<const KEY_NB_BITS: usize> {
-    inner: Vec<$u>,
+pub struct MapOfIndexes<T> {
+    inner: Vec<T>,
 }
 
-impl<const KEY_NB_BITS: usize> [<MapOfIndexes $struct_name>]<KEY_NB_BITS> {
+#[derive(Clone, Debug)]
+pub struct SortedMapOfIndexes<T> {
+    inner: Vec<T>,
+}
+
+impl<T: KeyValue> MapOfIndexes<T> {
     pub fn new() -> Self {
-        Self {inner: Vec::new()}
+        Self { inner: Vec::new() }
     }
 
-    fn push(&mut self, element: $u) {
+    fn push(&mut self, element: T) {
         self.inner.push(element);
     }
 }
 
-impl<const KEY_NB_BITS: usize> From<[<MapOfIndexes $struct_name>]<KEY_NB_BITS>>
-    for [<SortedMapOfIndexes $struct_name>]<KEY_NB_BITS>
-{
-    fn from(mut map_of_index: [<MapOfIndexes $struct_name>]<KEY_NB_BITS>) -> Self {
-        map_of_index.inner.sort();
+impl<T: KeyValue> From<MapOfIndexes<T>> for SortedMapOfIndexes<T> {
+    fn from(mut map_of_index: MapOfIndexes<T>) -> Self {
+        map_of_index.inner.sort_by(|a, b| a.key().cmp(b.key()));
         Self {
             inner: map_of_index.inner,
         }
     }
 }
 
-impl<const KEY_NB_BITS: usize> [<SortedMapOfIndexes $struct_name>]<KEY_NB_BITS> {
-    fn push(&mut self, element: $u) {
-    	if self.inner.last().map(|x| x >= &element).unwrap_or(false) {
-    		panic!("Attempted to push a lower element {:?}, last element value is: {:?}", element, self.inner.last());
-    	}
+impl<T: KeyValue> SortedMapOfIndexes<T> {
+    fn push(&mut self, element: T) {
+        if let Some(last) = self.inner.last() {
+            if last.key() <= element.key() {
+                panic!(
+                    "Attempted to push a lower element {:?}, last element value is: {:?}",
+                    element.key(),
+                    last.key()
+                );
+            }
+        }
+    }
+
+    fn get(&self, key: T::K) -> &T::V {
+        let mut idx = self.inner.len() / 2;
+        loop {
+            match self.inner[idx].key().cmp(&key) {
+                Ordering::Less => idx *= 2,
+                Ordering::Greater => idx /= 2,
+                Ordering::Equal => return &self.inner[idx].value(),
+            }
+        }
     }
 }
-}
-)+}}
-
-impl_for! {U8, u8, U16, u16, U32, u32, U64, u64, U128, u128, Usize, usize,}
 
 #[cfg(test)]
 mod test {
@@ -52,6 +68,6 @@ mod test {
 
     #[test]
     fn name() {
-        MapOfIndexesU8::<12>::new();
+        MapOfIndexes::<u8>::new();
     }
 }
