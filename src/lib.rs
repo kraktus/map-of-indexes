@@ -60,8 +60,12 @@ impl<T: KeyValue> SortedMapOfIndexes<T> {
     }
 
     pub fn get(&self, key: T::K) -> Option<&T::V> {
+        if self.inner.len() == 0 {
+            return None;
+        }
         let mut idx = self.inner.len() / 2;
-        for _ in 0..std::mem::size_of::<T::K>() {
+        for _ in 0..std::mem::size_of::<usize>() * 8 - self.inner.len().leading_zeros() as usize {
+            // to handle 32bit targets
             match self.inner[idx].key().cmp(&key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
                 Ordering::Greater => idx /= 2,
@@ -98,7 +102,7 @@ mod test {
     }
 
     #[test]
-    fn test_get() {
+    fn test_get_1() {
         let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
         s.push((10, 10));
         s.push((11, 11));
@@ -106,6 +110,14 @@ mod test {
         s.push((13, 13));
         for i in 10..14 {
             assert_eq!(s.get(i as i128), Some(&(i as u8)));
+        }
+    }
+    #[test]
+    fn test_get_2() {
+        let mut s = SortedMapOfIndexes::<(u8, u8)>::new();
+        for i in 0..u8::MAX {
+            s.push((i, i));
+            assert_eq!(s.get(i), Some(&i));
         }
     }
 
