@@ -18,64 +18,49 @@ pub enum MapOfIndexesError {
     DuplicateKeys,
 }
 
-macro_rules! declare_map {
-    ($name:ident) => {
-        #[derive(Clone, Debug)]
-        pub struct $name<T> {
-            inner: Vec<T>,
-        }
-        impl<T: KeyValue> $name<T> {
-            pub fn new() -> Self {
-                Self { inner: Vec::new() }
-            }
-
-            pub fn with_capacity(capacity: usize) -> Self {
-                Self {
-                    inner: Vec::with_capacity(capacity),
-                }
-            }
-        }
-        impl<T: KeyValue> Default for $name<T> {
-            fn default() -> Self {
-                Self::new()
-            }
-        }
-    };
+#[derive(Clone, Debug)]
+pub struct MapOfIndexes<T> {
+    inner: Vec<T>,
 }
 
-declare_map! {MapOfIndexes}
-declare_map! {SortedMapOfIndexes}
-
 impl<T: KeyValue> MapOfIndexes<T> {
-    pub fn push(&mut self, element: T) {
-        self.inner.push(element);
+    pub fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            inner: Vec::with_capacity(capacity),
+        }
+    }
+}
+impl<T: KeyValue> Default for MapOfIndexes<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-impl<T: KeyValue> TryFrom<MapOfIndexes<T>> for SortedMapOfIndexes<T> {
+impl<T: KeyValue> TryFrom<Vec<T>> for MapOfIndexes<T> {
     type Error = MapOfIndexesError;
 
-    fn try_from(mut map_of_index: MapOfIndexes<T>) -> Result<Self, Self::Error> {
+    fn try_from(mut vec: Vec<T>) -> Result<Self, Self::Error> {
         // Other solution was to check duplicate while sorting, supposedly faster to make linear search after
         // when comparing elements is cheap
-        map_of_index
-            .inner
+        vec
             .sort_unstable_by(|a, b| a.key().cmp(b.key()));
-        let duplicate = map_of_index
-            .inner
-            .windows(2)
+        let duplicate = vec.windows(2)
             .any(|w| w[0].key() == w[1].key());
         if duplicate {
             Err(MapOfIndexesError::DuplicateKeys)
         } else {
             Ok(Self {
-                inner: map_of_index.inner,
+                inner: vec,
             })
         }
     }
 }
 
-impl<T: KeyValue> SortedMapOfIndexes<T> {
+impl<T: KeyValue> MapOfIndexes<T> {
     pub fn push(&mut self, element: T) {
         if let Some(last) = self.inner.last() {
             println!("{:?}", last.key());
@@ -122,12 +107,15 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_init() {
-        MapOfIndexes::<(u8, u8)>::new();
+    fn test_push() {
+        let mut v = Vec::<(i128, u8)>::new();
+        v.push((1, 1));
+        v.push((2, 1));
+        assert_eq!(&v, &[(1, 1), (2, 1)]);
     }
 
     #[test]
-    fn test_push() {
+    fn test_push_sorted() {
         let mut s = MapOfIndexes::<(i128, u8)>::new();
         s.push((1, 1));
         s.push((2, 1));
@@ -135,16 +123,8 @@ mod test {
     }
 
     #[test]
-    fn test_push_sorted() {
-        let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
-        s.push((1, 1));
-        s.push((2, 1));
-        assert_eq!(&s.inner, &[(1, 1), (2, 1)]);
-    }
-
-    #[test]
     fn test_get_1() {
-        let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
+        let mut s = MapOfIndexes::<(i128, u8)>::new();
         s.push((10, 10));
         s.push((11, 11));
         s.push((12, 12));
@@ -155,7 +135,7 @@ mod test {
     }
     #[test]
     fn test_get_2() {
-        let mut s = SortedMapOfIndexes::<(u8, u8)>::new();
+        let mut s = MapOfIndexes::<(u8, u8)>::new();
         for i in 0..u8::MAX {
             s.push((i, i));
             assert_eq!(s.get(&i), Some(&i));
@@ -165,34 +145,34 @@ mod test {
     #[test]
     #[should_panic]
     fn test_push_sorted_panic() {
-        let mut s = SortedMapOfIndexes::<(i128, u8)>::new();
+        let mut s = MapOfIndexes::<(i128, u8)>::new();
         s.push((1, 1));
         s.push((-100, 1));
     }
 
     #[test]
     fn test_try_from() {
-        let mut s = MapOfIndexes::<(i32, u64)>::new();
+        let mut s = Vec::<(i32, u64)>::new();
         s.push((1, 1));
         s.push((-100, 2));
         s.push((3, 15));
-        let sorted_map: SortedMapOfIndexes<(i32, u64)> = s.try_into().unwrap();
+        let sorted_map: MapOfIndexes<(i32, u64)> = s.try_into().unwrap();
         assert_eq!(&sorted_map.inner, &[(-100, 2), (1, 1), (3, 15)])
     }
 
     #[test]
     fn test_try_from_fail_duplicate() {
-        let mut s = MapOfIndexes::<(i32, u64)>::new();
+        let mut s = Vec::<(i32, u64)>::new();
         s.push((1, 1));
         s.push((1, 2));
         s.push((3, 15));
-        let sorted_map_err = SortedMapOfIndexes::<(i32, u64)>::try_from(s).err().unwrap();
+        let sorted_map_err = MapOfIndexes::<(i32, u64)>::try_from(s).err().unwrap();
         assert_eq!(sorted_map_err, MapOfIndexesError::DuplicateKeys)
     }
 
     #[test]
     fn test_set() {
-        let mut s = SortedMapOfIndexes::<(u16, u16)>::new();
+        let mut s = MapOfIndexes::<(u16, u16)>::new();
         s.push((10, 10));
         s.push((11, 11));
         s.push((12, 12));
