@@ -23,17 +23,6 @@ pub struct MapOfIndexes<T> {
     inner: Vec<T>,
 }
 
-impl<T: KeyValue> MapOfIndexes<T> {
-    pub fn new() -> Self {
-        Self { inner: Vec::new() }
-    }
-
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            inner: Vec::with_capacity(capacity),
-        }
-    }
-}
 impl<T: KeyValue> Default for MapOfIndexes<T> {
     fn default() -> Self {
         Self::new()
@@ -46,21 +35,27 @@ impl<T: KeyValue> TryFrom<Vec<T>> for MapOfIndexes<T> {
     fn try_from(mut vec: Vec<T>) -> Result<Self, Self::Error> {
         // Other solution was to check duplicate while sorting, supposedly faster to make linear search after
         // when comparing elements is cheap
-        vec
-            .sort_unstable_by(|a, b| a.key().cmp(b.key()));
-        let duplicate = vec.windows(2)
-            .any(|w| w[0].key() == w[1].key());
+        vec.sort_unstable_by(|a, b| a.key().cmp(b.key()));
+        let duplicate = vec.windows(2).any(|w| w[0].key() == w[1].key());
         if duplicate {
             Err(MapOfIndexesError::DuplicateKeys)
         } else {
-            Ok(Self {
-                inner: vec,
-            })
+            Ok(Self { inner: vec })
         }
     }
 }
 
 impl<T: KeyValue> MapOfIndexes<T> {
+    pub fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            inner: Vec::with_capacity(capacity),
+        }
+    }
+
     pub fn push(&mut self, element: T) {
         if let Some(last) = self.inner.last() {
             println!("{:?}", last.key());
