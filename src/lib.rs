@@ -170,10 +170,18 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
-    /// Push an element to the map. Return an Error if the pushed key is smaller than the last element's one.
+    /// Push an element to the map.
     /// # Example
     /// ```
     /// use map_of_indexes::{MapOfIndexes, MapOfIndexesError};
+    ///
+    /// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
+    /// assert!(m.push_checked((1, "cool")).is_ok())
+    /// ```
+    /// # Errors
+    /// Returns [`MapOfIndexesError::SmallerKey`](crate::MapOfIndexesError) if the pushed key is smaller than the last element's one.
+    /// ```
+    /// # use map_of_indexes::{MapOfIndexes, MapOfIndexesError};
     ///
     /// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
     /// m.push((1, "cool"));
