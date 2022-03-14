@@ -1,5 +1,8 @@
 //! # Map-of-indexes
 //!
+//! [![crates.io](https://img.shields.io/crates/v/map-of-indexes.svg)](https://crates.io/crates/map-of-indexes)
+//! [![docs.rs](https://docs.rs/map-of-indexes/badge.svg)](https://docs.rs/map-of-indexes)
+//!
 //! A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
 //! In the documentation the indexes are referred as `key`. *Not* an indexed map!
 //!
