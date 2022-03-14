@@ -1,6 +1,4 @@
-# map_of_indexes
-
-## Map-of-indexes
+# Map-of-indexes
 
 A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
 In the documentation the indexes are referred as `key`. *Not* an indexed map!
