@@ -89,11 +89,13 @@ impl<T: for<'a> KeyValue<'a>> TryFrom<Vec<T>> for MapOfIndexes<T> {
 }
 
 impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
-    #[must_use] pub fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Self { inner: Vec::new() }
     }
 
-    #[must_use] pub fn with_capacity(capacity: usize) -> Self {
+    #[must_use]
+    pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
         }
@@ -156,7 +158,10 @@ where
     // To be run once after defining a type alias.
     // TODO use Macro instead(?)
     pub fn safety_check() {
-        assert!(!(std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS), "KEY_NB_BITS value is higher than the number of bits of the backup type.");
+        assert!(
+            !(std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS),
+            "KEY_NB_BITS value is higher than the number of bits of the backup type."
+        );
     }
 
     /// panics if `value` has more bits than `KEY_NB_BITS`
