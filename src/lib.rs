@@ -30,9 +30,11 @@ const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
 ///
 /// let tuple: (String, i64) = ("Key".to_string(), 123);
 /// // In this blanket implementation, both functions return a reference
-/// assert_eq!(tuple.key(), &"Key"); 
+/// assert_eq!(tuple.key(), &"Key");
 /// assert_eq!(tuple.value(), &123i64);
 /// ```
+///
+/// If you need a very compact representation, see [`CombinedKeyValue`](crate::CombinedKeyValue), which stores both the key and the key on a uint of a given size.
 // #[doc(notable_trait)]
 pub trait KeyValue<'a> {
     type K: Ord;
@@ -66,7 +68,7 @@ pub enum MapOfIndexesError {
     SmallerKey,
 }
 
-/// The main struct of this crate
+/// Basically a sorted vec
 #[derive(Clone, Debug)]
 pub struct MapOfIndexes<T> {
     inner: Vec<T>,
@@ -86,7 +88,7 @@ impl<T: for<'a> KeyValue<'a>> Default for MapOfIndexes<T> {
     }
 }
 
-/// Under the hood, will sort the vec key. Will succeed if there are no elements with the same key
+/// Under the hood, will sort the vec by key. Will succeed if there are no elements with the same key
 impl<T: for<'a> KeyValue<'a>> TryFrom<Vec<T>> for MapOfIndexes<T> {
     type Error = MapOfIndexesError;
 
@@ -116,15 +118,15 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
-/// Push an element to the map.
-/// # Panics
-/// ```should_panic
-/// use map_of_indexes::MapOfIndexes;
-///
-/// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
-/// m.push((1, "cool"));
-/// m.push((-10, "panic!"));
-/// ```
+    /// Push an element to the map. Panic if the pushed key is smaller than the last element's one.
+    /// # Panics
+    /// ```should_panic
+    /// use map_of_indexes::MapOfIndexes;
+    ///
+    /// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
+    /// m.push((1, "cool"));
+    /// m.push((-10, "panic!"));
+    /// ```
     #[inline]
     pub fn push(&mut self, element: T) {
         match self.push_checked(element) {
@@ -133,6 +135,16 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
+    /// Push an element to the map. Return an Error if the pushed key is smaller than the last element's one.
+    /// # Example
+    /// ```
+    /// use map_of_indexes::{MapOfIndexes, MapOfIndexesError};
+    ///
+    /// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
+    /// m.push((1, "cool"));
+    /// let err = m.push_checked((-10, "err!"));
+    /// assert_eq!(err, Err(MapOfIndexesError::SmallerKey))
+    /// ```
     pub fn push_checked(&mut self, element: T) -> Result<(), MapOfIndexesError> {
         if let Some(last) = self.last() {
             if last.key() >= element.key() {
@@ -262,13 +274,6 @@ mod test {
             s.push((i, i));
             assert_eq!(s.get(&i), Some(&i));
         }
-    }
-
-    #[test]
-    fn test_push_checked() {
-        let mut s = MapOfIndexes::<(i128, u8)>::new();
-        s.push((1, 1));
-        assert_eq!(s.push_checked((-100, 1)), Err(MapOfIndexesError::SmallerKey));
     }
 
     #[test]
