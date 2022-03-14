@@ -3,7 +3,7 @@
 //! A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
 //! In the documentation the indexes are referred as `key`.
 //!
-//! It can be considered a slower but more compact version of [BTreeMap](std::collections::BTreeMap).
+//! It can be considered a slower but more compact version of [`BTreeMap`](std::collections::BTreeMap).
 
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
@@ -89,11 +89,11 @@ impl<T: for<'a> KeyValue<'a>> TryFrom<Vec<T>> for MapOfIndexes<T> {
 }
 
 impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
-    pub fn new() -> Self {
+    #[must_use] pub fn new() -> Self {
         Self { inner: Vec::new() }
     }
 
-    pub fn with_capacity(capacity: usize) -> Self {
+    #[must_use] pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
         }
@@ -156,9 +156,7 @@ where
     // To be run once after defining a type alias.
     // TODO use Macro instead(?)
     pub fn safety_check() {
-        if std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS {
-            panic!("KEY_NB_BITS value is higher than the number of bits of the backup type.");
-        }
+        assert!(!(std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS), "KEY_NB_BITS value is higher than the number of bits of the backup type.");
     }
 
     /// panics if `value` has more bits than `KEY_NB_BITS`
@@ -217,7 +215,7 @@ mod test {
         s.push((12, 12));
         s.push((13, 13));
         for i in 10..14 {
-            assert_eq!(s.get(&(i as i128)), Some(&(i as u8)));
+            assert_eq!(s.get(&i128::from(i)), Some(&(i as u8)));
         }
     }
     #[test]
