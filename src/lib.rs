@@ -160,7 +160,7 @@ where
     pub fn safety_check() {
         assert!(
             !(std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS),
-            "KEY_NB_BITS value is higher than the number of bits of the backup type."
+            "KEY_NB_BITS + VALUE_NB_BITS value is higher than the number of bits of the backup type."
         );
     }
 
