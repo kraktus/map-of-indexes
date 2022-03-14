@@ -80,7 +80,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     fn get_idx<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<usize> {
-        if self.inner.len() == 0 {
+        if self.inner.is_empty() {
             return None;
         }
         let mut idx = self.inner.len() / 2;
