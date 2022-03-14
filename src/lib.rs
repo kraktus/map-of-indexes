@@ -14,7 +14,7 @@ const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
 /// Trait that `T` must implement to be able to work with [`MapOfIndexes`](crate::MapOfIndexes) of `T`.
 ///
 /// Can be implemented on your own custom structs. `KeyValue::K` represents the key (index) of the pair, while `KeyValue::V` is the value.
-/// 
+///
 /// [`KeyValue`](crate::KeyValue) is already implemented for all 2-tuples, the first element being considered as the key.
 /// ```
 /// use map_of_indexes::KeyValue;
@@ -50,7 +50,9 @@ pub enum MapOfIndexesError {
     #[error("At least two elements with same keys. Keys must be uniques.")]
     DuplicateKeys,
     #[error("No elements were found with this key.")]
-    InvalidKey,
+    KeyNotFound,
+    #[error("Attempted to push an element with a lower key than last element.")]
+    SmallerKey,
 }
 
 #[derive(Clone, Debug)]
@@ -91,13 +93,14 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
-    pub fn push(&mut self, element: T) {
+    pub fn push(&mut self, element: T) -> Result<(), MapOfIndexesError> {
         if let Some(last) = self.inner.last() {
             if last.key() >= element.key() {
-                panic!("Attempted to push an element with a lower key than last element");
+                return Err(MapOfIndexesError::SmallerKey);
             }
         }
-        self.inner.push(element)
+        self.inner.push(element);
+        Ok(())
     }
 
     fn get_idx<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<usize> {
@@ -116,12 +119,16 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         None
     }
 
+    /// Performs a dichotomial search and returns the value
     pub fn get<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
         self.get_idx(key).map(|idx| self.inner[idx].value())
     }
 
+    /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
     pub fn set(&mut self, element: T) -> Result<T, MapOfIndexesError> {
-        self.get_idx(element.key()).map(|idx| std::mem::replace(&mut self.inner[idx],element)).ok_or(MapOfIndexesError::InvalidKey)
+        self.get_idx(element.key())
+            .map(|idx| std::mem::replace(&mut self.inner[idx], element))
+            .ok_or(MapOfIndexesError::KeyNotFound)
     }
 }
 
@@ -217,11 +224,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn test_push_sorted_panic() {
         let mut s = MapOfIndexes::<(i128, u8)>::new();
         s.push((1, 1));
-        s.push((-100, 1));
+        assert_eq!(s.push((-100, 1)), Err(MapOfIndexesError::SmallerKey));
     }
 
     #[test]
@@ -260,8 +266,11 @@ mod test {
     fn test_set_err() {
         let mut s = MapOfIndexes::<(&'static str, &'static str)>::new();
         s.push(("test", "value"));
-        let err = s.set(("key does not exist", "err must be returned")).err().unwrap();
-        assert_eq!(err, MapOfIndexesError::InvalidKey);
+        let err = s
+            .set(("key does not exist", "err must be returned"))
+            .err()
+            .unwrap();
+        assert_eq!(err, MapOfIndexesError::KeyNotFound);
     }
 
     #[test]
