@@ -30,7 +30,7 @@ pub trait KeyValue<'a> {
     fn value(&'a self) -> Self::V;
 }
 
-impl<'a, KEY: Ord + Debug, VALUE> KeyValue<'a> for (KEY, VALUE)
+impl<'a, KEY: Ord, VALUE> KeyValue<'a> for (KEY, VALUE)
 where
     KEY: 'a,
     VALUE: 'a,
