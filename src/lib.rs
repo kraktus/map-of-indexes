@@ -45,10 +45,12 @@ where
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq, Hash)]
 pub enum MapOfIndexesError {
     #[error("At least two elements with same keys. Keys must be uniques.")]
     DuplicateKeys,
+    #[error("No elements were found with this key.")]
+    InvalidKey,
 }
 
 #[derive(Clone, Debug)]
@@ -118,10 +120,8 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         self.get_idx(key).map(|idx| self.inner[idx].value())
     }
 
-    pub fn set(&mut self, element: T) {
-        if let Some(idx) = self.get_idx(element.key()) {
-            self.inner[idx] = element
-        }
+    pub fn set(&mut self, element: T) -> Result<T, MapOfIndexesError> {
+        self.get_idx(element.key()).map(|idx| std::mem::replace(&mut self.inner[idx],element)).ok_or(MapOfIndexesError::InvalidKey)
     }
 }
 
@@ -251,8 +251,17 @@ mod test {
         s.push((11, 11));
         s.push((12, 12));
         s.push((13, 13));
-        s.set((10, 100));
+        let old_key_value = s.set((10, 100)).unwrap();
+        assert_eq!(old_key_value, (10, 10));
         assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)])
+    }
+
+    #[test]
+    fn test_set_err() {
+        let mut s = MapOfIndexes::<(&'static str, &'static str)>::new();
+        s.push(("test", "value"));
+        let err = s.set(("key does not exist", "err must be returned")).err().unwrap();
+        assert_eq!(err, MapOfIndexesError::InvalidKey);
     }
 
     #[test]
