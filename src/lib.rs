@@ -1,7 +1,7 @@
 //! # Map-of-indexes
 //!
 //! A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
-//! In the documentation the indexes are referred as `key`.
+//! In the documentation the indexes are referred as `key`. *Not* an indexed map!
 //!
 //! It can be considered a slower but more compact version of [`BTreeMap`](std::collections::BTreeMap).
 //! # Examples
@@ -205,7 +205,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         let mut idx = self.len() / 2;
         for _ in 0..usize::BITS as usize - self.len().leading_zeros() as usize {
             // We're basing that on usize to handle non 64 bits targets
-            match self[idx].key().cmp(&key) {
+            match self[idx].key().cmp(key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.len() - 1),
                 Ordering::Greater => idx /= 2,
                 Ordering::Equal => return Some(idx),
@@ -220,6 +220,30 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
+    /// # Examples
+    /// ```
+    /// # use map_of_indexes::MapOfIndexes;
+    /// let mut s = MapOfIndexes::<(u16, u16)>::new();
+    /// s.push((10, 10));
+    /// s.push((11, 11));
+    /// s.push((12, 12));
+    /// s.push((13, 13));
+    /// let old_key_value = s.set((10, 100)).unwrap();
+    /// assert_eq!(old_key_value, (10, 10));
+    /// assert_eq!(*s, &[(10, 100), (11, 11), (12, 12), (13, 13)]);
+    /// ```
+    /// # Errors
+    /// ```
+    /// use map_of_indexes::{MapOfIndexes, MapOfIndexesError};
+    /// 
+    /// let mut s = MapOfIndexes::<(&'static str, &'static str)>::new();
+    /// s.push(("test", "value"));
+    /// let err = s
+    /// .set(("key does not exist", "err must be returned"))
+    /// .err()
+    /// .unwrap();
+    /// assert_eq!(err, MapOfIndexesError::KeyNotFound);
+    /// ```
     pub fn set(&mut self, element: T) -> Result<T, MapOfIndexesError> {
         let idx_opt = self.get_idx(&element.key());
         idx_opt
@@ -373,29 +397,6 @@ mod test {
         let s: Vec<(i32, u64)> = vec![(1, 1), (1, 2), (3, 15)];
         let sorted_map_err = MapOfIndexes::<(i32, u64)>::try_from(s).err().unwrap();
         assert_eq!(sorted_map_err, MapOfIndexesError::DuplicateKeys)
-    }
-
-    #[test]
-    fn test_set() {
-        let mut s = MapOfIndexes::<(u16, u16)>::new();
-        s.push((10, 10));
-        s.push((11, 11));
-        s.push((12, 12));
-        s.push((13, 13));
-        let old_key_value = s.set((10, 100)).unwrap();
-        assert_eq!(old_key_value, (10, 10));
-        assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)]);
-    }
-
-    #[test]
-    fn test_set_err() {
-        let mut s = MapOfIndexes::<(&'static str, &'static str)>::new();
-        s.push(("test", "value"));
-        let err = s
-            .set(("key does not exist", "err must be returned"))
-            .err()
-            .unwrap();
-        assert_eq!(err, MapOfIndexesError::KeyNotFound);
     }
 
     #[test]

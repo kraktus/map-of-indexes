@@ -2,6 +2,14 @@
 name = "map_of_indexes"
 version = "0.1.0"
 edition = "2021"
+publish = false # Comment this line out before publishing
+authors = ["Kraktus"]
+description = "A vec-backed map"
+repository = "https://github.com/kraktus/map-of-indexes"
+license = "AGPL-3.0+"
+readme = "README.md"
+keywords = ["vec", "indexes", "map"]
+categories = ["data-structures", "compression", "caching"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
