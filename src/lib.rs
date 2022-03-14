@@ -61,6 +61,7 @@ pub enum MapOfIndexesError {
     SmallerKey,
 }
 
+/// The main struct of this crate
 #[derive(Clone, Debug)]
 pub struct MapOfIndexes<T> {
     inner: Vec<T>,
@@ -72,6 +73,7 @@ impl<T: for<'a> KeyValue<'a>> Default for MapOfIndexes<T> {
     }
 }
 
+/// Under the hood, will sort the vec key. Will succeed if there are no elements with the same key
 impl<T: for<'a> KeyValue<'a>> TryFrom<Vec<T>> for MapOfIndexes<T> {
     type Error = MapOfIndexesError;
 
@@ -101,9 +103,21 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
+/// Push an element to the map.
+/// # Panics
+/// ```should_panic
+/// use map_of_indexes::MapOfIndexes;
+///
+/// let mut m: MapOfIndexes<(isize, &'static str)> = MapOfIndexes::new();
+/// m.push((1, "cool"));
+/// m.push((-10, "panic!"));
+/// ```
     #[inline]
     pub fn push(&mut self, element: T) {
-        self.push_checked(element).unwrap()
+        match self.push_checked(element) {
+            Ok(()) => (),
+            Err(err) => panic!("{}", err),
+        }
     }
 
     pub fn push_checked(&mut self, element: T) -> Result<(), MapOfIndexesError> {
