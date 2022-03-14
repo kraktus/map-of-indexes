@@ -2,8 +2,10 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 use thiserror::Error;
 
+const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
+
 pub trait KeyValue<'a> {
-    type K: Ord + Debug;
+    type K: Ord;
     type V;
     fn key(&'a self) -> Self::K;
     fn value(&'a self) -> Self::V;
@@ -70,13 +72,8 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 
     pub fn push(&mut self, element: T) {
         if let Some(last) = self.inner.last() {
-            println!("{:?}", last.key());
             if last.key() >= element.key() {
-                panic!(
-                    "Attempted to push a lower element {:?}, last element value is: {:?}",
-                    element.key(),
-                    last.key()
-                );
+                panic!("Attempted to push an element with a lower key than last element");
             }
         }
         self.inner.push(element)
@@ -87,7 +84,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
             return None;
         }
         let mut idx = self.inner.len() / 2;
-        for _ in 0..std::mem::size_of::<usize>() * 8 - self.inner.len().leading_zeros() as usize {
+        for _ in 0..USIZE_NB_BITS - self.inner.len().leading_zeros() as usize {
             // to handle 32bit targets
             match self.inner[idx].key().cmp(&key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
@@ -110,33 +107,49 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 }
 
 // TODO https://nora.codes/post/its-time-to-get-hyped-about-const-generics-in-rust/ statically check if mem_size<T> * 8 >= KEY_NB_BITS
-// pub struct CombinedKeyValue<T, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>(T);
+pub struct CombinedKeyValue<T, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>(T);
 
-// impl<T: From<usize>, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize> CombinedKeyValue<T, {KEY_NB_BITS}, {VALUE_NB_BITS}> {
+// If `KEY_NB_BITS` and `VALUE_NB_BITS` are compatible with backed type, `TryFrom<usize>` should never fail.
+impl<T: TryFrom<usize> + Into<usize>, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>
+    CombinedKeyValue<T, { KEY_NB_BITS }, { VALUE_NB_BITS }>
+where
+    <T as TryFrom<usize>>::Error: Debug,
+{
+    // To be run once after defining a type alias.
+    // TODO use Macro instead(?)
+    pub fn safety_check() {
+        if std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS {
+            panic!("KEY_NB_BITS value is higher than the number of bits of the backup type.");
+        }
+    }
 
-//     // To be run once after defining a type alias.
-//     // TODO use Macro instead(?)
-//     pub fn safety_check() {
-//         if std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS {
-//             panic!("KEY_NB_BITS value is higher than the number of bits of the backup type.");
-//         }
-//     }
+    /// panics if `value` has more bits than `KEY_NB_BITS`
+    pub fn new<K: Into<usize>, V: Into<usize>>(key: K, value: V) -> Self {
+        // TODO assert key and value have less bits than defined in the type
+        Self(
+            T::try_from(key.into() | (value.into() << KEY_NB_BITS))
+                .expect("Run `Self::safety_check` and should never panic"),
+        )
+    }
+}
 
-//     pub fn new<K: Into<usize>, V: Into<usize>>(key: K, value: V) -> Self {
-//         Self(T::from(key.into() | value.into() << KEY_NB_BITS))
-//     }
-// }
-
-// impl<T: From<usize> + Ord + Debug + Copy, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize> KeyValue for  CombinedKeyValue<T, {KEY_NB_BITS}, {VALUE_NB_BITS}> where usize: From<T> {
-//     type K = T;
-//     type V = T;
-//     fn key(&self) -> Self::K {
-//         T::from(usize::from(self.0) & (usize::MAX >> VALUE_NB_BITS))
-//     }
-//     fn value(&self) -> Self::V {
-//         T::from(usize::from(self.0) >> KEY_NB_BITS)
-//     }
-// }
+impl<'a, T: TryFrom<usize> + Ord + Copy, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>
+    KeyValue<'a> for CombinedKeyValue<T, { KEY_NB_BITS }, { VALUE_NB_BITS }>
+where
+    usize: From<T>,
+    <T as TryFrom<usize>>::Error: Debug,
+{
+    type K = T;
+    type V = T;
+    fn key(&self) -> Self::K {
+        T::try_from(usize::from(self.0) & (usize::MAX >> (USIZE_NB_BITS - KEY_NB_BITS)))
+            .expect("Run `Self::safety_check` and should never panic")
+    }
+    fn value(&self) -> Self::V {
+        T::try_from(usize::from(self.0) >> KEY_NB_BITS)
+            .expect("Run `Self::safety_check` and should never panic")
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -215,5 +228,41 @@ mod test {
         s.push((13, 13));
         s.set((10, 100));
         assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)])
+    }
+
+    #[test]
+    fn test_combined_key_value_type() {
+        type CombinedU8 = CombinedKeyValue<u8, 4, 4>;
+        CombinedU8::safety_check();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_combined_key_value_type_error_key() {
+        type CombinedU8 = CombinedKeyValue<u8, 5, 4>;
+        CombinedU8::safety_check();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_combined_key_value_type_error_value() {
+        type CombinedU8 = CombinedKeyValue<u8, 4, 5>;
+        CombinedU8::safety_check();
+    }
+
+    // #[test]
+    // #[should_panic] // should not compile
+    // fn test_combined_key_value_type_error_only_uints() {
+    //     type CombinedU8 = CombinedKeyValue<i8, 4, 4>; // Replace by doc tests
+    //     CombinedU8::safety_check();
+    // }
+
+    #[test]
+    fn test_combined_key_value_new() {
+        type CombinedU8 = CombinedKeyValue<u8, 4, 4>;
+        CombinedU8::safety_check();
+        let x = CombinedU8::new(4u8, 3u8);
+        assert_eq!(x.key(), 4u8);
+        assert_eq!(x.value(), 3u8);
     }
 }
