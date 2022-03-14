@@ -4,6 +4,48 @@
 //! In the documentation the indexes are referred as `key`.
 //!
 //! It can be considered a slower but more compact version of [`BTreeMap`](std::collections::BTreeMap).
+//! # Examples
+//! A brief example of the crate's capacities
+//! ```
+//! use map_of_indexes::{MapOfIndexes, MapOfIndexesError, KeyValue};
+//!
+//! # fn main() -> Result<(), MapOfIndexesError> {
+//! let v = vec![(3, 4), (1, 2), (5, 6)];
+//! let mut map: MapOfIndexes::<(u8, u16)> = v.try_into()?;
+//!
+//! map.push((7,8));
+//! let push_res = map.push_checked((0,9));
+//! assert_eq!(push_res, Err(MapOfIndexesError::SmallerKey));
+//!
+//! let old_key_value = map.set((1,9))?;
+//! assert_eq!(old_key_value.key(), &1);
+//! assert_eq!(old_key_value.value(), &2);
+//! # Ok(())
+//! # }
+//! ```
+//! [`CombinedKeyValue`](crate::CombinedKeyValue) is a compact representation when you need to save space.
+//! ```
+//! # use map_of_indexes::{MapOfIndexes, MapOfIndexesError, KeyValue};
+//! use map_of_indexes::{CombinedKeyValue};
+//! # fn main() -> Result<(), MapOfIndexesError> {
+//! // We have keys that take up to 40 bits, and value up to 24;
+//! // Using (u64, u64) would have wasted 8 byte per entry.
+//! type CombinedU64 = CombinedKeyValue<u64, 40, 24>;
+//! CombinedU64::safety_check(); // ensure that key and value size fit on the uint.
+//!
+//! let v = vec![CombinedU64::new(3, 4), CombinedU64::new(1, 2), CombinedU64::new(5, 6)];
+//! let mut map: MapOfIndexes::<(u8, u16)> = v.try_into()?;
+//!
+//! map.push((7,8));
+//! let push_res = map.push_checked((0,9));
+//! assert_eq!(push_res, Err(MapOfIndexesError::SmallerKey));
+//!
+//! let old_key_value = map.set((1,9))?;
+//! assert_eq!(old_key_value.key(), &1);
+//! assert_eq!(old_key_value.value(), &2);
+//! # Ok(())
+//! # }
+//! ```
 
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
@@ -16,8 +58,6 @@ use std::fmt::Debug;
 use std::ops::Deref;
 
 use thiserror::Error;
-
-const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
 
 /// Trait that `T` must implement to be able to work with [`MapOfIndexes`](crate::MapOfIndexes) of `T`.
 ///
@@ -160,7 +200,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
             return None;
         }
         let mut idx = self.len() / 2;
-        for _ in 0..USIZE_NB_BITS - self.len().leading_zeros() as usize {
+        for _ in 0..usize::BITS as usize - self.len().leading_zeros() as usize {
             // We're basing that on usize to handle non 64 bits targets
             match self[idx].key().cmp(&key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.len() - 1),
@@ -191,25 +231,25 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 /// type CombinedI8 = CombinedKeyValue<i8, 4, 4>;
 /// let combined = CombinedI8::new(-10, 3);
 /// ```
-pub struct CombinedKeyValue<T, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>(T);
+pub struct CombinedKeyValue<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>(T);
 
-// If `KEY_NB_BITS` and `VALUE_NB_BITS` are compatible with backed type, `TryFrom<usize>` should never fail.
-impl<T: TryFrom<usize> + Into<usize>, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>
+// If `KEY_NB_BITS` and `VALUE_NB_BITS` are compatible with backed type, `TryFrom<u128>` should never fail.
+impl<T: TryFrom<u128> + Into<u128>, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>
     CombinedKeyValue<T, { KEY_NB_BITS }, { VALUE_NB_BITS }>
 where
-    <T as TryFrom<usize>>::Error: Debug,
+    <T as TryFrom<u128>>::Error: Debug,
 {
     // To be run once after defining a type alias.
     // TODO use Macro instead(?)
     pub fn safety_check() {
         assert!(
-            !(std::mem::size_of::<T>() * 8 < KEY_NB_BITS + VALUE_NB_BITS),
+            !(std::mem::size_of::<T>() * 8 < (KEY_NB_BITS + VALUE_NB_BITS).into()),
             "KEY_NB_BITS + VALUE_NB_BITS value is higher than the number of bits of the backup type."
         );
     }
 
     /// panics if `value` has more bits than `KEY_NB_BITS`
-    pub fn new<K: Into<usize>, V: Into<usize>>(key: K, value: V) -> Self {
+    pub fn new<K: Into<u128>, V: Into<u128>>(key: K, value: V) -> Self {
         // TODO assert key and value have less bits than defined in the type
         Self(
             T::try_from(key.into() | (value.into() << KEY_NB_BITS))
@@ -218,20 +258,20 @@ where
     }
 }
 
-impl<'a, T: TryFrom<usize> + Ord + Copy, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>
-    KeyValue<'a> for CombinedKeyValue<T, { KEY_NB_BITS }, { VALUE_NB_BITS }>
+impl<'a, T: TryFrom<u128> + Ord + Copy, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> KeyValue<'a>
+    for CombinedKeyValue<T, { KEY_NB_BITS }, { VALUE_NB_BITS }>
 where
-    usize: From<T>,
-    <T as TryFrom<usize>>::Error: Debug,
+    u128: From<T>,
+    <T as TryFrom<u128>>::Error: Debug,
 {
     type K = T;
     type V = T;
     fn key(&self) -> Self::K {
-        T::try_from(usize::from(self.0) & (usize::MAX >> (USIZE_NB_BITS - KEY_NB_BITS)))
+        T::try_from(u128::from(self.0) & (u128::MAX >> (u128::BITS - KEY_NB_BITS as u32)))
             .expect("Run `Self::safety_check` and should never panic")
     }
     fn value(&self) -> Self::V {
-        T::try_from(usize::from(self.0) >> KEY_NB_BITS)
+        T::try_from(u128::from(self.0) >> KEY_NB_BITS)
             .expect("Run `Self::safety_check` and should never panic")
     }
 }
