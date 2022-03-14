@@ -31,7 +31,7 @@
 //! // We have keys that take up to 40 bits, and value up to 24;
 //! // Using (u64, u64) would have wasted 8 byte per entry.
 //! type CombinedU64 = CombinedKeyValue<u64, 40, 24>;
-//! CombinedU64::safety_check(); // ensure that key and value size fit on the uint.
+//! CombinedU64::safety_check(); // ensure that key and value size fit on the unsigned integer.
 //!
 //! let v = vec![CombinedU64::new(3u64, 4u32), CombinedU64::new(1u64, 2u32), CombinedU64::new(5u64, 6u32)];
 //! let map: MapOfIndexes<_> = v.try_into()?;
@@ -49,7 +49,7 @@
 // #![allow(clippy::missing_errors_doc)]
 
 use std::cmp::Ordering;
-use std::fmt::Debug;
+use std::fmt::{Debug, Error, Formatter};
 use std::ops::Deref;
 
 use thiserror::Error;
@@ -221,9 +221,28 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 
 /// A compact struct that implement [`KeyValue`](crate::KeyValue)
 ///
-/// Both the key and value are stored on the same element which can be any uint.
+/// Both the key and value are stored on the same element which can be any unsigned integer.
 ///
 /// # Examples
+///
+/// ```
+/// # use map_of_indexes::{MapOfIndexes, MapOfIndexesError, KeyValue};
+/// use map_of_indexes::{CombinedKeyValue};
+/// # fn main() -> Result<(), MapOfIndexesError> {
+/// // We have keys that take up to 40 bits, and value up to 24;
+/// // Using (u64, u64) would have wasted 8 byte per entry.
+/// type CombinedU64 = CombinedKeyValue<u64, 40, 24>;
+/// CombinedU64::safety_check(); // ensure that key and value size fit on the unsigned integer.
+///
+/// let v = vec![CombinedU64::new(3u64, 4u32), CombinedU64::new(1u64, 2u32), CombinedU64::new(5u64, 6u32)];
+/// let map: MapOfIndexes<_> = v.try_into()?;
+/// let inner_raw: Vec<u64> = Vec::from_iter(map.iter().map(|x| *x.as_ref()));
+/// assert_eq!(inner_raw, vec![2199023255553, 4398046511107, 6597069766661]);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Not working with signed integer
 /// ```compile_fail
 /// use map_of_indexes::CombinedKeyValue;
 ///
@@ -233,6 +252,13 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 /// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CombinedKeyValue<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>(T);
+
+// TODO, make that work
+// impl<'a, T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> Debug for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS> where CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS>: KeyValue<'a> + Debug{
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+//         write!(f, "CombinedKeyValue<{},{},{}> {{ key: {:?}, value: {:?} }}", std::any::type_name::<T>(), KEY_NB_BITS, VALUE_NB_BITS, self.key(), self.value())
+//     }
+// }
 
 impl<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> AsRef<T> for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS> {
 
