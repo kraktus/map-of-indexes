@@ -33,19 +33,14 @@
 //! type CombinedU64 = CombinedKeyValue<u64, 40, 24>;
 //! CombinedU64::safety_check(); // ensure that key and value size fit on the uint.
 //!
-//! let v = vec![CombinedU64::new(3, 4), CombinedU64::new(1, 2), CombinedU64::new(5, 6)];
-//! let mut map: MapOfIndexes::<(u8, u16)> = v.try_into()?;
-//!
-//! map.push((7,8));
-//! let push_res = map.push_checked((0,9));
-//! assert_eq!(push_res, Err(MapOfIndexesError::SmallerKey));
-//!
-//! let old_key_value = map.set((1,9))?;
-//! assert_eq!(old_key_value.key(), &1);
-//! assert_eq!(old_key_value.value(), &2);
+//! let v = vec![CombinedU64::new(3u64, 4u32), CombinedU64::new(1u64, 2u32), CombinedU64::new(5u64, 6u32)];
+//! let map: MapOfIndexes<_> = v.try_into()?;
+//! let inner_raw: Vec<u64> = Vec::from_iter(map.iter().map(|x| *x.as_ref()));
+//! assert_eq!(inner_raw, vec![2199023255553, 4398046511107, 6597069766661]);
 //! # Ok(())
 //! # }
 //! ```
+//! For an even more compact representation, consider using the [`bitvec`](https://docs.rs/bitvec/latest/bitvec/index.html) crate.
 
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
@@ -224,6 +219,11 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 }
 
+/// A compact struct that implement [`KeyValue`](crate::KeyValue)
+///
+/// Both the key and value are stored on the same element which can be any uint.
+///
+/// # Examples
 /// ```compile_fail
 /// use map_of_indexes::CombinedKeyValue;
 ///
@@ -231,7 +231,15 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 /// type CombinedI8 = CombinedKeyValue<i8, 4, 4>;
 /// let combined = CombinedI8::new(-10, 3);
 /// ```
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CombinedKeyValue<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>(T);
+
+impl<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> AsRef<T> for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS> {
+
+    fn as_ref(&self) -> &T{
+        &self.0
+    }
+}
 
 // If `KEY_NB_BITS` and `VALUE_NB_BITS` are compatible with backed type, `TryFrom<u128>` should never fail.
 impl<T: TryFrom<u128> + Into<u128>, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>
