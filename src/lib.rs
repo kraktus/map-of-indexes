@@ -276,6 +276,15 @@ where
 {
     // To be run once after defining a type alias.
     // TODO use Macro instead(?)
+    /// Check that chosen values `VALUE_NB_BITS` and `KEY_NB_BITS` can fit on `T`
+    /// # Panics
+    /// Panic when this is not the case
+    /// ```should_panic
+    /// use map_of_indexes::CombinedKeyValue;
+    ///
+    /// type CombinedU8 = CombinedKeyValue<u8, 3, 6>;
+    /// CombinedU8::safety_check();
+    /// ```
     pub fn safety_check() {
         assert!(
             !(std::mem::size_of::<T>() * 8 < (KEY_NB_BITS + VALUE_NB_BITS).into()),
