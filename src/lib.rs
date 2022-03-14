@@ -352,10 +352,7 @@ mod test {
 
     #[test]
     fn test_try_from_fail_duplicate() {
-        let mut s = Vec::<(i32, u64)>::new();
-        s.push((1, 1));
-        s.push((1, 2));
-        s.push((3, 15));
+        let s: Vec<(i32, u64)> = vec![(1, 1), (1, 2), (3, 15)];
         let sorted_map_err = MapOfIndexes::<(i32, u64)>::try_from(s).err().unwrap();
         assert_eq!(sorted_map_err, MapOfIndexesError::DuplicateKeys)
     }
