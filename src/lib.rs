@@ -109,6 +109,7 @@ pub struct MapOfIndexes<T> {
     inner: Vec<T>,
 }
 
+/// Easy access to the underlying vec
 impl<T> Deref for MapOfIndexes<T> {
     type Target = Vec<T>;
 
@@ -293,6 +294,7 @@ pub struct CombinedKeyValue<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>(T
 //     }
 // }
 
+/// Easy access to the underlying `T`
 impl<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> AsRef<T>
     for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS>
 {
