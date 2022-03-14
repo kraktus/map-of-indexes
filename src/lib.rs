@@ -235,7 +235,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     /// # Errors
     /// ```
     /// use map_of_indexes::{MapOfIndexes, MapOfIndexesError};
-    /// 
+    ///
     /// let mut s = MapOfIndexes::<(&'static str, &'static str)>::new();
     /// s.push(("test", "value"));
     /// let err = s
