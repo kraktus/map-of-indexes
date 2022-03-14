@@ -49,7 +49,7 @@
 // #![allow(clippy::missing_errors_doc)]
 
 use std::cmp::Ordering;
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::ops::Deref;
 
 use thiserror::Error;
@@ -198,7 +198,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         Ok(())
     }
 
-    fn get_idx<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<usize> {
+    fn get_idx<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<usize> {
         if self.is_empty() {
             return None;
         }
@@ -215,13 +215,14 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     /// Performs a dichotomial search and returns the value
-    pub fn get<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
+    pub fn get<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
         self.get_idx(key).map(|idx| self[idx].value())
     }
 
     /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
     pub fn set(&mut self, element: T) -> Result<T, MapOfIndexesError> {
-        self.get_idx(element.key())
+        let idx_opt = self.get_idx(&element.key());
+        idx_opt
             .map(|idx| std::mem::replace(&mut self.inner[idx], element))
             .ok_or(MapOfIndexesError::KeyNotFound)
     }
@@ -348,7 +349,7 @@ mod test {
         s.push((12, 12));
         s.push((13, 13));
         for i in 10..14 {
-            assert_eq!(s.get(&i128::from(i)), Some(&(i as u8)));
+            assert_eq!(s.get(&&i128::from(i)), Some(&(i as u8)));
         }
     }
     #[test]
@@ -356,7 +357,7 @@ mod test {
         let mut s = MapOfIndexes::<(u8, u8)>::new();
         for i in 0..u8::MAX {
             s.push((i, i));
-            assert_eq!(s.get(&i), Some(&i));
+            assert_eq!(s.get(&&i), Some(&i));
         }
     }
 
