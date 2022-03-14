@@ -49,7 +49,7 @@
 // #![allow(clippy::missing_errors_doc)]
 
 use std::cmp::Ordering;
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::{Debug};
 use std::ops::Deref;
 
 use thiserror::Error;
@@ -302,7 +302,7 @@ where
     type K = T;
     type V = T;
     fn key(&self) -> Self::K {
-        T::try_from(u128::from(self.0) & (u128::MAX >> (u128::BITS - KEY_NB_BITS as u32)))
+        T::try_from(u128::from(self.0) & (u128::MAX >> (u128::BITS - u32::from(KEY_NB_BITS))))
             .expect("Run `Self::safety_check` and should never panic")
     }
     fn value(&self) -> Self::V {
@@ -314,14 +314,6 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn test_push() {
-        let mut v = Vec::<(i128, u8)>::new();
-        v.push((1, 1));
-        v.push((2, 1));
-        assert_eq!(&v, &[(1, 1), (2, 1)]);
-    }
 
     #[test]
     fn test_push_sorted() {
