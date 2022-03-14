@@ -1,9 +1,15 @@
 //! # Map-of-indexes
-//! 
+//!
 //! A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
 //! In the documentation the indexes are referred as `key`.
-//! 
+//!
 //! It can be considered a slower but more compact version of [BTreeMap](std::collections::BTreeMap).
+
+#![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
+// #![allow(clippy::semicolon_if_nothing_returned)]
+// #![allow(clippy::missing_panics_doc)]
+// #![allow(clippy::missing_errors_doc)]
 
 use std::cmp::Ordering;
 use std::fmt::Debug;
