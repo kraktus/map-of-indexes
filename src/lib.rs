@@ -260,9 +260,10 @@ pub struct CombinedKeyValue<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8>(T
 //     }
 // }
 
-impl<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> AsRef<T> for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS> {
-
-    fn as_ref(&self) -> &T{
+impl<T, const KEY_NB_BITS: u8, const VALUE_NB_BITS: u8> AsRef<T>
+    for CombinedKeyValue<T, KEY_NB_BITS, VALUE_NB_BITS>
+{
+    fn as_ref(&self) -> &T {
         &self.0
     }
 }
