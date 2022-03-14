@@ -13,6 +13,8 @@
 
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::ops::Deref;
+
 use thiserror::Error;
 
 const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
@@ -22,13 +24,16 @@ const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
 /// Can be implemented on your own custom structs. `KeyValue::K` represents the key (index) of the pair, while `KeyValue::V` is the value.
 ///
 /// [`KeyValue`](crate::KeyValue) is already implemented for all 2-tuples, the first element being considered as the key.
+/// # Examples
 /// ```
 /// use map_of_indexes::KeyValue;
 ///
 /// let tuple: (String, i64) = ("Key".to_string(), 123);
-/// assert_eq!(tuple.key(), &"Key"); // returns a reference;
-/// assert_eq!(tuple.value(), &123i64); // returns a reference;
+/// // In this blanket implementation, both functions return a reference
+/// assert_eq!(tuple.key(), &"Key"); 
+/// assert_eq!(tuple.value(), &123i64);
 /// ```
+// #[doc(notable_trait)]
 pub trait KeyValue<'a> {
     type K: Ord;
     type V;
@@ -65,6 +70,14 @@ pub enum MapOfIndexesError {
 #[derive(Clone, Debug)]
 pub struct MapOfIndexes<T> {
     inner: Vec<T>,
+}
+
+impl<T> Deref for MapOfIndexes<T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl<T: for<'a> KeyValue<'a>> Default for MapOfIndexes<T> {
@@ -121,7 +134,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     pub fn push_checked(&mut self, element: T) -> Result<(), MapOfIndexesError> {
-        if let Some(last) = self.inner.last() {
+        if let Some(last) = self.last() {
             if last.key() >= element.key() {
                 return Err(MapOfIndexesError::SmallerKey);
             }
@@ -131,14 +144,14 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     fn get_idx<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<usize> {
-        if self.inner.is_empty() {
+        if self.is_empty() {
             return None;
         }
-        let mut idx = self.inner.len() / 2;
-        for _ in 0..USIZE_NB_BITS - self.inner.len().leading_zeros() as usize {
+        let mut idx = self.len() / 2;
+        for _ in 0..USIZE_NB_BITS - self.len().leading_zeros() as usize {
             // We're basing that on usize to handle non 64 bits targets
-            match self.inner[idx].key().cmp(&key) {
-                Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
+            match self[idx].key().cmp(&key) {
+                Ordering::Less => idx = std::cmp::min(idx * 2, self.len() - 1),
                 Ordering::Greater => idx /= 2,
                 Ordering::Equal => return Some(idx),
             }
@@ -148,7 +161,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
 
     /// Performs a dichotomial search and returns the value
     pub fn get<'a>(&'a self, key: <T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
-        self.get_idx(key).map(|idx| self.inner[idx].value())
+        self.get_idx(key).map(|idx| self[idx].value())
     }
 
     /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
