@@ -7,7 +7,7 @@
 
 #![warn(clippy::pedantic)]
 #![warn(clippy::cargo)]
-// #![allow(clippy::semicolon_if_nothing_returned)]
+#![allow(clippy::semicolon_if_nothing_returned)]
 // #![allow(clippy::missing_panics_doc)]
 // #![allow(clippy::missing_errors_doc)]
 
@@ -101,7 +101,12 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
     }
 
-    pub fn push(&mut self, element: T) -> Result<(), MapOfIndexesError> {
+    #[inline]
+    pub fn push(&mut self, element: T) {
+        self.push_checked(element).unwrap()
+    }
+
+    pub fn push_checked(&mut self, element: T) -> Result<(), MapOfIndexesError> {
         if let Some(last) = self.inner.last() {
             if last.key() >= element.key() {
                 return Err(MapOfIndexesError::SmallerKey);
@@ -233,10 +238,10 @@ mod test {
     }
 
     #[test]
-    fn test_push_sorted_panic() {
+    fn test_push_checked() {
         let mut s = MapOfIndexes::<(i128, u8)>::new();
         s.push((1, 1));
-        assert_eq!(s.push((-100, 1)), Err(MapOfIndexesError::SmallerKey));
+        assert_eq!(s.push_checked((-100, 1)), Err(MapOfIndexesError::SmallerKey));
     }
 
     #[test]
@@ -268,7 +273,7 @@ mod test {
         s.push((13, 13));
         let old_key_value = s.set((10, 100)).unwrap();
         assert_eq!(old_key_value, (10, 10));
-        assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)])
+        assert_eq!(&s.inner, &[(10, 100), (11, 11), (12, 12), (13, 13)]);
     }
 
     #[test]
