@@ -345,10 +345,7 @@ mod test {
 
     #[test]
     fn test_try_from() {
-        let mut s = Vec::<(i32, u64)>::new();
-        s.push((1, 1));
-        s.push((-100, 2));
-        s.push((3, 15));
+        let s: Vec<(i32, u64)> = vec![(1, 1), (-100, 2), (3, 15)];
         let sorted_map: MapOfIndexes<(i32, u64)> = s.try_into().unwrap();
         assert_eq!(&sorted_map.inner, &[(-100, 2), (1, 1), (3, 15)])
     }
