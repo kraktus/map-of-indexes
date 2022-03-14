@@ -1,9 +1,28 @@
+//! # Map-of-indexes
+//! 
+//! A small utility crate when you have a list of unique but not dense indexes for which to each you want to associates a value.
+//! In the documentation the indexes are referred as `key`.
+//! 
+//! It can be considered a slower but more compact version of [BTreeMap](std::collections::BTreeMap).
+
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use thiserror::Error;
 
 const USIZE_NB_BITS: usize = std::mem::size_of::<usize>() * 8;
 
+/// Trait that `T` must implement to be able to work with [`MapOfIndexes`](crate::MapOfIndexes) of `T`.
+///
+/// Can be implemented on your own custom structs. `KeyValue::K` represents the key (index) of the pair, while `KeyValue::V` is the value.
+/// 
+/// [`KeyValue`](crate::KeyValue) is already implemented for all 2-tuples, the first element being considered as the key.
+/// ```
+/// use map_of_indexes::KeyValue;
+///
+/// let tuple: (String, i64) = ("Key".to_string(), 123);
+/// assert_eq!(tuple.key(), &"Key"); // returns a reference;
+/// assert_eq!(tuple.value(), &123i64); // returns a reference;
+/// ```
 pub trait KeyValue<'a> {
     type K: Ord;
     type V;
@@ -85,7 +104,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         }
         let mut idx = self.inner.len() / 2;
         for _ in 0..USIZE_NB_BITS - self.inner.len().leading_zeros() as usize {
-            // to handle 32bit targets
+            // We're basing that on usize to handle non 64 bits targets
             match self.inner[idx].key().cmp(&key) {
                 Ordering::Less => idx = std::cmp::min(idx * 2, self.inner.len() - 1),
                 Ordering::Greater => idx /= 2,
@@ -106,7 +125,13 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 }
 
-// TODO https://nora.codes/post/its-time-to-get-hyped-about-const-generics-in-rust/ statically check if mem_size<T> * 8 >= KEY_NB_BITS
+/// ```compile_fail
+/// use map_of_indexes::CombinedKeyValue;
+///
+/// // Will not be able to be instanciated
+/// type CombinedI8 = CombinedKeyValue<i8, 4, 4>;
+/// let combined = CombinedI8::new(-10, 3);
+/// ```
 pub struct CombinedKeyValue<T, const KEY_NB_BITS: usize, const VALUE_NB_BITS: usize>(T);
 
 // If `KEY_NB_BITS` and `VALUE_NB_BITS` are compatible with backed type, `TryFrom<usize>` should never fail.
@@ -249,13 +274,6 @@ mod test {
         type CombinedU8 = CombinedKeyValue<u8, 4, 5>;
         CombinedU8::safety_check();
     }
-
-    // #[test]
-    // #[should_panic] // should not compile
-    // fn test_combined_key_value_type_error_only_uints() {
-    //     type CombinedU8 = CombinedKeyValue<i8, 4, 4>; // Replace by doc tests
-    //     CombinedU8::safety_check();
-    // }
 
     #[test]
     fn test_combined_key_value_new() {
