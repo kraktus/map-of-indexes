@@ -319,6 +319,7 @@ where
     // To be run once after defining a type alias.
     // TODO use Macro instead(?) or associated constant?
     // pub const TEST: usize = std::mem::size_of::<T>() * 8 - (KEY_NB_BITS + VALUE_NB_BITS) as usize;
+
     /// Check that chosen values `VALUE_NB_BITS` and `KEY_NB_BITS` can fit on `T`
     /// # Panics
     /// Panic when this is not the case
