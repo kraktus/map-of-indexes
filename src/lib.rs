@@ -336,11 +336,22 @@ where
         );
     }
 
-    /// panics if `value` has more bits than `KEY_NB_BITS`
+    /// # Panics
+    /// panics if `value` or `value` has more bits than their declared size
+    /// ```should_panic
+    /// # use map_of_indexes::CombinedKeyValue;
+    /// type CombinedU8 = CombinedKeyValue<u8, 4, 4>;
+    /// CombinedU8::safety_check(); // always
+    ///
+    /// CombinedU8::new(2u8, 15u8); // 2 ** 4 = 16;
+    /// ```
     pub fn new<K: Into<u128>, V: Into<u128>>(key: K, value: V) -> Self {
-        // TODO assert key and value have less bits than defined in the type
+        let key_uint: u128 = key.into();
+        let value_uint: u128 = value.into();
+        assert!(key_uint < 2u128.pow(KEY_NB_BITS.into()));
+        assert!(value_uint < 2u128.pow(VALUE_NB_BITS.into()));
         Self(
-            T::try_from(key.into() | (value.into() << KEY_NB_BITS))
+            T::try_from(key_uint | (value_uint << KEY_NB_BITS))
                 .expect("Run `Self::safety_check` and should never panic"),
         )
     }
