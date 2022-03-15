@@ -343,7 +343,7 @@ where
     /// type CombinedU8 = CombinedKeyValue<u8, 4, 4>;
     /// CombinedU8::safety_check(); // always
     ///
-    /// CombinedU8::new(2u8, 15u8); // 2 ** 4 = 16;
+    /// CombinedU8::new(2u8, 16u8); // 2 ** 4 = 16;
     /// ```
     pub fn new<K: Into<u128>, V: Into<u128>>(key: K, value: V) -> Self {
         let key_uint: u128 = key.into();
