@@ -1,6 +1,6 @@
 [package]
 name = "map-of-indexes"
-version = "0.1.0-dev"
+version = "0.1.1"
 edition = "2021"
 publish = false # Comment this line out before publishing
 authors = ["Kraktus"]
