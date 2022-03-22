@@ -51,7 +51,6 @@
 // #![allow(clippy::missing_panics_doc)]
 // #![allow(clippy::missing_errors_doc)]
 
-use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::ops::Deref;
 
@@ -220,7 +219,6 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     pub fn get_value<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
         self.get_idx(key).map(|idx| self[idx].value())
     }
-
 
     /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
     /// # Examples
@@ -449,11 +447,11 @@ mod test {
     fn test_get_element_on_large_map() {
         let mut map = MapOfIndexes::<(u32, u64)>::with_capacity(400000);
         for i in 0..400000 {
-            map.push((i as u32,i as u64))
+            map.push((i as u32, i as u64))
         }
         println!("{:?}", &map[0..10]);
         for j in 0..400000 {
-            assert_eq!(map.get_element(&&(j as u32)), Some(&(j as u32,j as u64)))
+            assert_eq!(map.get_element(&&(j as u32)), Some(&(j as u32, j as u64)))
         }
     }
 }
