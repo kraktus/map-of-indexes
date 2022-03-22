@@ -206,28 +206,17 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         Ok(())
     }
 
+    #[inline]
     fn get_idx<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<usize> {
-        if self.is_empty() {
-            return None;
-        }
-        let mut idx = self.len() / 2;
-        for _ in 0..usize::BITS as usize - self.len().leading_zeros() as usize {
-            // We're basing that on usize to handle non 64 bits targets
-            match self[idx].key().cmp(key) {
-                Ordering::Less => idx = std::cmp::min(idx * 2, self.len() - 1),
-                Ordering::Greater => idx /= 2,
-                Ordering::Equal => return Some(idx),
-            }
-        }
-        None
+        self.binary_search_by(|t| t.key().cmp(key)).ok()
     }
 
-    /// Performs a dichotomial search and returns the element
+    /// Performs a dichotomal search and returns the element
     pub fn get_element<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<&T> {
         self.get_idx(key).map(|idx| &self[idx])
     }
 
-    /// Performs a dichotomial search and returns the value
+    /// Performs a dichotomal search and returns the value
     pub fn get_value<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
         self.get_idx(key).map(|idx| self[idx].value())
     }
@@ -454,5 +443,17 @@ mod test {
         let x = CombinedU8::new(4u8, 3u8);
         assert_eq!(x.key(), 4u8);
         assert_eq!(x.value(), 3u8);
+    }
+
+    #[test]
+    fn test_get_element_on_large_map() {
+        let mut map = MapOfIndexes::<(u32, u64)>::with_capacity(400000);
+        for i in 0..400000 {
+            map.push((i as u32,i as u64))
+        }
+        println!("{:?}", &map[0..10]);
+        for j in 0..400000 {
+            assert_eq!(map.get_element(&&(j as u32)), Some(&(j as u32,j as u64)))
+        }
     }
 }

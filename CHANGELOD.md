@@ -1,5 +1,10 @@
 # Changelog for map-of-indexes
 
+## v0.1.4
+
+
+- Fix `get_element` and `get_value` search, internally use `Vec::binary_search_by` instead of reinventing the wheel
+
 ## v0.1.3
 
 
