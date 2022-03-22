@@ -1,5 +1,10 @@
 # Changelog for map-of-indexes
 
+## v0.1.3
+
+
+- Rename `MapOfIndexes<T>::get` to `MapOfIndexes<T>::get_element`, not to overshadow `Vec::get`
+
 ## v0.1.2
 
 

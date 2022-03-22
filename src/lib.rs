@@ -223,7 +223,7 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
     }
 
     /// Performs a dichotomial search and returns the element
-    pub fn get<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<&T> {
+    pub fn get_element<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<&T> {
         self.get_idx(key).map(|idx| &self[idx])
     }
 
