@@ -1,5 +1,12 @@
 # Changelog for map-of-indexes
 
+## v0.1.2
+
+
+- `MapOfIndexes<T>::get_value` returns `Option<T::V>`. Previous behavior of `MapOfIndexes<T>::get`
+
+- `MapOfIndexes<T>::get` now returns `Option<&T>`
+
 
 ## v0.1.1
 

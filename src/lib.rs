@@ -222,10 +222,16 @@ impl<T: for<'a> KeyValue<'a>> MapOfIndexes<T> {
         None
     }
 
+    /// Performs a dichotomial search and returns the element
+    pub fn get<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<&T> {
+        self.get_idx(key).map(|idx| &self[idx])
+    }
+
     /// Performs a dichotomial search and returns the value
-    pub fn get<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
+    pub fn get_value<'a>(&'a self, key: &<T as KeyValue<'a>>::K) -> Option<<T as KeyValue<'_>>::V> {
         self.get_idx(key).map(|idx| self[idx].value())
     }
+
 
     /// Find and replace the key-value element, returning the previous key-value if found, or an error otherwise.
     /// # Examples
@@ -395,7 +401,7 @@ mod test {
         s.push((12, 12));
         s.push((13, 13));
         for i in 10..14 {
-            assert_eq!(s.get(&&i128::from(i)), Some(&(i as u8)));
+            assert_eq!(s.get_value(&&i128::from(i)), Some(&(i as u8)));
         }
     }
     #[test]
@@ -403,7 +409,7 @@ mod test {
         let mut s = MapOfIndexes::<(u8, u8)>::new();
         for i in 0..u8::MAX {
             s.push((i, i));
-            assert_eq!(s.get(&&i), Some(&i));
+            assert_eq!(s.get_value(&&i), Some(&i));
         }
     }
 
