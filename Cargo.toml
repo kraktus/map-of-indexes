@@ -1,8 +1,8 @@
 [package]
 name = "map-of-indexes"
-version = "0.1.3-dev"
+version = "0.1.3"
 edition = "2021"
-publish = false # Comment this line out before publishing
+# publish = false # Comment this line out before publishing
 authors = ["Kraktus"]
 description = "A compact key-value map for unique but not dense indexes"
 repository = "https://github.com/kraktus/map-of-indexes"
