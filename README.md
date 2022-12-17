@@ -8,7 +8,7 @@ In the documentation the indexes are referred as `key`. *Not* an indexed map!
 
 It can be considered a slower but more compact version of [`BTreeMap`](std::collections::BTreeMap).
 ## Examples
-A brief example of the crate's capacities
+A brief example of the crate's capabilities
 ```rust
 use map_of_indexes::{MapOfIndexes, MapOfIndexesError, KeyValue};
 
